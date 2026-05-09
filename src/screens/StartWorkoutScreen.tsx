@@ -23,6 +23,38 @@ export function StartWorkoutScreen(): JSX.Element {
     navigate(`/workout/active/${session.localId}`);
   };
 
+  const startFromRecent = async () => {
+    const mostRecentCompleted = recentSessions.find((session) => session.status === 'completed');
+    if (!mostRecentCompleted) {
+      await startEmpty();
+      return;
+    }
+
+    const session = await workoutSessionRepository.createWorkoutSession({
+      userLocalId: 'local-user',
+      templateLocalId: mostRecentCompleted.templateLocalId,
+      sessionNotes: null,
+    });
+
+    const previousBlocks = await workoutSessionRepository.getSessionExercises(mostRecentCompleted.localId);
+    for (const block of previousBlocks) {
+      await workoutSessionRepository.addExerciseToSession(session.localId, block.exerciseLocalId, {
+        plannedSetCount: block.plannedSetCount,
+        defaultRestSeconds: block.defaultRestSeconds,
+      });
+    }
+
+    navigate(`/workout/active/${session.localId}`);
+  };
+
+  const startSuggested = async () => {
+    if (!templates.length) {
+      await startEmpty();
+      return;
+    }
+    await startFromTemplate(templates[0].localId);
+  };
+
   const startFromTemplate = async (templateId: string) => {
     const session = await workoutSessionRepository.createWorkoutSession({
       userLocalId: 'local-user',
@@ -45,15 +77,15 @@ export function StartWorkoutScreen(): JSX.Element {
     <main className='wb-screen'>
       <section>
         <h1 className='wb-screen-title'>Start fast.</h1>
-        <p className='wb-screen-subtitle'>Bold CTAs and low-friction entry reduce drop-off before training starts.[web:45][web:47]</p>
+        <p className='wb-screen-subtitle'>Choose a fast way to start and log every set with minimal friction.</p>
       </section>
 
       <div className='wb-card wb-stack-md'>
         <div className='wb-label'>Immediate</div>
         <PrimaryButton fullWidth onClick={startEmpty}>Start Empty Workout</PrimaryButton>
         <div className='wb-grid wb-grid-2'>
-          <SecondaryButton fullWidth onClick={startEmpty}>Repeat Last Workout</SecondaryButton>
-          <SecondaryButton fullWidth onClick={startEmpty}>Suggested Workout</SecondaryButton>
+          <SecondaryButton fullWidth onClick={startFromRecent}>Repeat Last Workout</SecondaryButton>
+          <SecondaryButton fullWidth onClick={startSuggested}>Suggested Workout</SecondaryButton>
         </div>
       </div>
 
